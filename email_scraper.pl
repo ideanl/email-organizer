@@ -33,7 +33,7 @@ my $folder_reader =
 die $folder_reader unless ref $folder_reader;
 
 my $i = 0;
-while($i < 200 && !$folder_reader->end_of_file()) {
+while($i < 500 and !$folder_reader->end_of_file()) {
 	my $email = $folder_reader->read_next_email();
 	$email = Email::MIME->new($email);
   new_doc($email, encode('UTF-8', $email->header('Subject')));

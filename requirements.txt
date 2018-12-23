@@ -1,3 +1,7 @@
 numpy
 matplotlib
 scikit-learn
+sqlalchemy
+pandas
+psycopg2
+tables

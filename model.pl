@@ -14,7 +14,7 @@ sub new_doc {
   my $subject = shift;
   push @emails, $email;
   push @doc_vector, {};
-  push @subjects, $subject;
+  push @subjects, ($subject || "");
 }
 
 sub addToDoc {

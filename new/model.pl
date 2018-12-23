@@ -24,6 +24,8 @@ sub addToDoc {
 }
 
 sub out_data {
+  shift(@doc_vector);
+  shift(@subjects);
   my $json = encode_json({bodies => \@doc_vector, subjects => \@subjects});
   print $json;
 }
