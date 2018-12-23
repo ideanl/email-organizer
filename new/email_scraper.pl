@@ -11,6 +11,8 @@ use Encode qw(encode);
 require './model.pl';
 
 my $file_name = shift(@ARGV) || "Archived.mbox";
+my $action = shift(@ARGV) || "scrape";
+
 #my $file_name = "input.tgz";
 my $file_handle = new FileHandle($file_name);
 
@@ -33,14 +35,14 @@ die $folder_reader unless ref $folder_reader;
 
 my $i = 0;
 while($i < 10000 and !$folder_reader->end_of_file()) {
-	my $email = $folder_reader->read_next_email();
-	$email = Email::MIME->new($email);
+  my $email = $folder_reader->read_next_email();
+  $email = Email::MIME->new($email);
   new_doc($email);
   process_email($email);
   $i++;
 }
 
-out_data();
+out_data($action);
 
 sub process_email {
   my $email = shift;
@@ -84,7 +86,6 @@ sub process_text {
   $text =~ s/[^A-Za-z\s]//g;
 
   if ($text ne "") {
-    # replace with doc-term matrix
     addToDoc(encode('UTF-8', $text));
   }
 }

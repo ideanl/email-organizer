@@ -62,23 +62,19 @@ email_df = read_json_and_store_emails('email_metadata.json', 'email_store.h5')
 vect = TfidfVectorizer(stop_words='english', max_df=0.50, min_df=2)
 X = vect.fit_transform(email_df.bodies)
 
-n_clusters = 8
+n_clusters = 12
 clf = clustering.KMeans(n_clusters=n_clusters, max_iter=100, init='k-means++', n_init=1)
 labels = clf.fit_predict(X)
 email_df['label'] = labels
 email_df.to_sql('emails', engine, if_exists='replace')
 
-#print (X)
-
-#cluster_colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF0000', '#00FF00', '#0000FF']
+#cluster_colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF0000', '#00FF00', '#0000FF', '#FFFFFF', '#000000']
 #colors = [cluster_colors[i] for i in labels]
 #X_dense = X.todense()
 #coords = PCA(n_components=2).fit_transform(X_dense)
 #plt.scatter(coords[:, 0], coords[:, 1], c=colors)
 #plt.show()
 
-#features = vect.get_feature_names()
+features = vect.get_feature_names()
 #print(top_mean_feats(X, features, top_n=10))
-#print(top_feats_per_cluster(X, labels, features))
-
-
+print(top_feats_per_cluster(X, labels, features))
