@@ -2,9 +2,9 @@ This project is an attempt at email organization using K-Means Clustering.
 The 'new/' directory contains the final version of the code after using more
 python libraries.
 
-Results
-Not ideal. The clustering does not work effectively if the dataset has an
-abnormally large amount of similar emails that are strange in nature.
-To resolve this issue, a different clustering algorithm that still works
-on large datsets, but that works better on uneven datasets may work better.
-This is a future project idea.
+Results (In Progress)
+So far, clusters are working because there are groups of very similar emails
+in each cluster. However, html tag attributes and CSS is still being included
+in the term matrices so that needs to be resolved. That may improve the quality
+of the clusters. Additionally, more preprocessing such as SVD may help as the
+clusters are showing signs of being overly specific.
