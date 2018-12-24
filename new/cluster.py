@@ -1,11 +1,16 @@
 import numpy as np
 import os, json
 import pandas as pd
+import random
+import colorsys
 import matplotlib.pyplot as plt
 import sklearn.cluster as clustering
 from sqlalchemy import create_engine
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.preprocessing import Normalizer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import make_pipeline
+from sklearn.cluster import OPTICS
 
 def read_json_and_store_emails(json_name, hdf_name):
     if not os.path.isfile(hdf_name):
@@ -28,53 +33,74 @@ def read_json_and_store_emails(json_name, hdf_name):
         store = pd.HDFStore(hdf_name)
         return store['df']
 
-def top_tfidf_feats(row, features, top_n=20):
-    topn_ids = np.argsort(row)[::-1][:top_n]
-    top_feats = [(features[i], row[i]) for i in topn_ids]
-    df = pd.DataFrame(top_feats, columns=['features', 'score'])
-    return df
-def top_feats_in_doc(X, features, row_id, top_n=25):
-    row = np.squeeze(X[row_id].toarray())
-    return top_tfidf_feats(row, features, top_n)
-def top_mean_feats(X, features,
-    grp_ids=None, min_tfidf=0.1, top_n=25):
-    if grp_ids:
-        D = X[grp_ids].toarray()
+def top_feats_per_cluster(svd, kmeans, labels, terms):
+    labels = np.unique(labels)
+    if svd:
+        original_space_centroids = svd.inverse_transform(kmeans.cluster_centers_)
+        order_centroids = original_space_centroids.argsort()[:, ::-1]
     else:
-        D = X.toarray()
-    D[D < min_tfidf] = 0
-    tfidf_means = np.mean(D, axis=0)
-    return top_tfidf_feats(tfidf_means, features, top_n)
+        order_centroids = kmeans.cluster_centers_.argsort()[:, ::-1]
 
-def top_feats_per_cluster(X, y, features, min_tfidf=0.1, top_n=25):
-    dfs = []
-    labels = np.unique(y)
     for label in labels:
-        ids = np.where(y==label) 
-        feats_df = top_mean_feats(X, features, ids,    min_tfidf=min_tfidf, top_n=top_n)
-        feats_df.label = label
-        dfs.append(feats_df)
-    return dfs
+        print("Cluster %d:" % label, end='')
+        for ind in order_centroids[label, :10]:
+            print(' %s' % terms[ind], end='')
+        print()
+
+def get_colors(n):
+    HSV_tuples = [(x*1.0/n, 0.5, 0.5) for x in range(n)]
+    hex_out = []
+    for rgb in HSV_tuples:
+        rgb = [int(x*255) for x in colorsys.hsv_to_rgb(*rgb)]
+        hex_out.append('#%02x%02x%02x' % (rgb[0], rgb[1], rgb[2])) 
+    return hex_out
 
 engine = create_engine('postgresql://localhost:5432/email_classifier')
 email_df = read_json_and_store_emails('email_metadata.json', 'email_store.h5')
 
+print("Vectorizing...")
 vect = TfidfVectorizer(stop_words='english', max_df=0.50, min_df=2)
 X = vect.fit_transform(email_df.bodies)
 
-n_clusters = 12
-clf = clustering.KMeans(n_clusters=n_clusters, max_iter=100, init='k-means++', n_init=1)
-labels = clf.fit_predict(X)
+svd = True
+
+if svd:
+    print("Performing SVD...")
+    svd = TruncatedSVD(500)
+    normalizer = Normalizer(copy=False)
+    lsa = make_pipeline(svd, normalizer)
+    X_new = lsa.fit_transform(X)
+
+n_clusters = 8
+kmeans = False
+
+if kmeans:
+    print("Performing K-Means...")
+    clf = clustering.KMeans(n_clusters=n_clusters, init='k-means++', n_jobs=-1)
+    labels = clf.fit_predict(X_new)
+else:
+    clf = OPTICS(max_eps=5, min_samples=8, metric='cosine', n_jobs=-1)
+    labels = clf.fit_predict(X_new)
+    colors = get_colors(len(np.unique(labels)))
+    colors = [colors[l] for l in labels]
+#X_dense = X.todense()
+#coords = PCA(n_components=2).fit_transform(X)
+
+coords = TruncatedSVD(n_components=2).fit_transform(X)
+plt.scatter(coords[:, 0], coords[:, 1], c=colors)
+plt.show()
+
+
 email_df['label'] = labels
 email_df.to_sql('emails', engine, if_exists='replace')
 
-#cluster_colors = ['#00FFFF', '#FF00FF', '#FFFF00', '#FF0000', '#00FF00', '#0000FF', '#FFFFFF', '#000000']
-#colors = [cluster_colors[i] for i in labels]
+colors = get_colors(len(np.unique(labels)))
+colors = [colors[l] for l in labels]
 #X_dense = X.todense()
-#coords = PCA(n_components=2).fit_transform(X_dense)
-#plt.scatter(coords[:, 0], coords[:, 1], c=colors)
-#plt.show()
+#coords = PCA(n_components=2).fit_transform(X)
+coords = TruncatedSVD(n_components=2).fit_transform(X)
+plt.scatter(coords[:, 0], coords[:, 1], c=colors)
+plt.show()
 
 features = vect.get_feature_names()
-#print(top_mean_feats(X, features, top_n=10))
-print(top_feats_per_cluster(X, labels, features))
+top_feats_per_cluster(svd, clf, labels, features)

@@ -2,9 +2,13 @@ This project is an attempt at email organization using K-Means Clustering.
 The 'new/' directory contains the final version of the code after using more
 python libraries.
 
-Results (In Progress)
+Results
 So far, clusters are working because there are groups of very similar emails
 in each cluster. However, html tag attributes and CSS is still being included
 in the term matrices so that needs to be resolved. That may improve the quality
 of the clusters. Additionally, more preprocessing such as SVD may help as the
 clusters are showing signs of being overly specific.
+
+Update (12/24/2018):
+The HTML problem being resolved has significantly helped results. Also, SVD appears to be an insignificant help. However, K-Means still seems to be the best clustering algorithm. OPTICS was attempted and is still optionally allowed in the code but it produces way too many clusters and each cluster seems somewhat unrelated. This could be a result of too many dimensions being reduced with SVD though.
+I need a better metric for determining the strength of these clusters. Right now, most of my evaluation is through analysis of the resulting MBOX files. I also see plotted colors on the graphs but this is not good enough for me to determine which performs better. I need some sort of mathematical equation.

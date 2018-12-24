@@ -4,8 +4,8 @@ use warnings;
 
 use Mail::Mbox::MessageParser;
 use Email::MIME;
-use HTML::Parser;
 use HTML::Entities;
+use HTML::Restrict;
 use Encode qw(encode);
 
 require './model.pl';
@@ -20,9 +20,6 @@ Mail::Mbox::MessageParser::SETUP_CACHE(
   { 'file_name' => '/tmp/cache' } );
 
 
-my $parser = HTML::Parser->new(api_version => 3);
-$parser->handler(text => \&process_html_text, 'text');
- 
 my $folder_reader =
   new Mail::Mbox::MessageParser( {
     'file_name' => $file_name,
@@ -34,7 +31,7 @@ my $folder_reader =
 die $folder_reader unless ref $folder_reader;
 
 my $i = 0;
-while($i < 10000 and !$folder_reader->end_of_file()) {
+while($i < 20000 and !$folder_reader->end_of_file()) {
   my $email = $folder_reader->read_next_email();
   $email = Email::MIME->new($email);
   new_doc($email);
@@ -66,18 +63,15 @@ sub process_body {
   my $body = shift;
   my $type = shift;
 
-  if ($type =~ /(text\/plain)/) {
+  if ($type =~ /(body\/plain)/) {
     # Filter whitespace including decoded &nbsp
     process_text($body);
+
   } elsif ($type =~ /text\/html/) {
-    $parser->parse($body);
+    my $hr = HTML::Restrict->new();
+    my $text = decode_entities($hr->process( $body ));
+    process_text($text);
   }
-}
-
-sub process_html_text {
-  my $text = decode_entities(shift);
-
-  process_text($text);
 }
 
 sub process_text {
